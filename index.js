@@ -6,14 +6,14 @@ const port = process.env.PORT || 3000;
 
 const uri =
   "mongodb+srv://simpleDBuser:DwhuP4Omy4j8i8pY@cluster0.it01qhi.mongodb.net/?appName=Cluster0";
-app.use(cors);
+
+app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("connect");
+  res.send("Server Connected");
 });
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -24,20 +24,29 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    // Send a ping to confirm a successful connection
+    const collectionDB = client.db("Movie_Master");
+    const movieCollection = collectionDB.collection("Movies");
+
+    app.get("/allmovies", async (req, res) => {
+      const result = await movieCollection.find().toArray();
+      res.send(result);
+    });
+    app.post("/users", async (req, res) => {
+      const data = req.body;
+      const result = await movieCollection.insertOne(data);
+      res.send(result);
+    });
+
     await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+    console.log("✅ MongoDB connected successfully");
+
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
+  } catch (err) {
+    console.error("Connection error:", err);
   }
 }
-run().catch(console.dir);
 
-app.listen(port, () => {
-  console.log(`User Server started on Port ${port}`);
-});
+run().catch(console.dir);
