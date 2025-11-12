@@ -60,6 +60,19 @@ async function run() {
       const result = await movieCollection.find().toArray();
       res.send(result);
     });
+    app.get("/top-rated", async (req, res) => {
+      try {
+        const topMovies = await movieCollection
+          .find({}, { projection: { _id: 0 } })
+          .sort({ rating: -1 })
+          .limit(5)
+          .toArray();
+        res.send(topMovies);
+      } catch (error) {
+        console.error("Error fetching top-rated movies:", error);
+        res.status(500).send({ message: "Failed to fetch top-rated movies" });
+      }
+    });
     app.post("/users", async (req, res) => {
       const data = req.body;
       const result = await movieCollection.insertOne(data);
