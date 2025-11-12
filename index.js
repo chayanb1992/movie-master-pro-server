@@ -3,6 +3,8 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 3000;
+const admin = require("firebase-admin");
+const dotenv = require("dotenv");
 
 const uri =
   "mongodb+srv://simpleDBuser:DwhuP4Omy4j8i8pY@cluster0.it01qhi.mongodb.net/?appName=Cluster0";
@@ -20,6 +22,32 @@ const client = new MongoClient(uri, {
     strict: true,
     deprecationErrors: true,
   },
+});
+
+dotenv.config();
+console.log("Loaded private key:", !!process.env.FIREBASE_PRIVATE_KEY);
+
+//get firebase all users
+admin.initializeApp({
+  credential: admin.credential.cert({
+    type: process.env.FIREBASE_TYPE,
+    project_id: process.env.FIREBASE_PROJECT_ID,
+    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+    private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    client_email: process.env.FIREBASE_CLIENT_EMAIL,
+    client_id: process.env.FIREBASE_CLIENT_ID,
+  }),
+});
+
+// ✅ Create API endpoint to get total users
+app.get("/total-users", async (req, res) => {
+  try {
+    const listUsers = await admin.auth().listUsers();
+    // console.log(listUsers);
+    res.json({ totalUsers: listUsers.users.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 async function run() {
