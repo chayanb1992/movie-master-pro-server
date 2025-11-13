@@ -186,6 +186,7 @@ async function run() {
           posterUrl: updatedData.posterUrl,
           language: updatedData.language,
           country: updatedData.country,
+          createdAt: updatedData.createdAt,
         },
       };
       try {
@@ -289,6 +290,40 @@ async function run() {
       } catch (err) {
         console.error(err);
         res.status(500).send({ message: "Server error" });
+      }
+    });
+
+    // ✅ Get all unique genres with counts and sample poster
+    app.get("/genres", async (req, res) => {
+      try {
+        const movies = await movieCollection.find().toArray();
+
+        const genreMap = {};
+
+        movies.forEach((movie) => {
+          if (movie.genre) {
+            movie.genre.split(",").forEach((g) => {
+              const genre = g.trim();
+              if (!genreMap[genre]) {
+                genreMap[genre] = { count: 1, posterUrl: movie.posterUrl };
+              } else {
+                genreMap[genre].count += 1;
+              }
+            });
+          }
+        });
+
+        // Convert object to array
+        const genreArray = Object.keys(genreMap).map((key) => ({
+          name: key,
+          count: genreMap[key].count,
+          posterUrl: genreMap[key].posterUrl,
+        }));
+
+        res.status(200).json(genreArray);
+      } catch (error) {
+        console.error("Error fetching genres:", error);
+        res.status(500).json({ message: "Failed to fetch genres" });
       }
     });
 
