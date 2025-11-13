@@ -55,6 +55,7 @@ async function run() {
     await client.connect();
     const collectionDB = client.db("Movie_Master");
     const movieCollection = collectionDB.collection("Movies");
+    const userWatchList = collectionDB.collection("usersData");
 
     app.get("/allmovies", async (req, res) => {
       const result = await movieCollection.find().toArray();
@@ -170,6 +171,118 @@ async function run() {
         res.json(result);
       } catch (err) {
         res.status(500).json({ message: "Error updating movie" });
+      }
+    });
+
+    //add watch list
+    // app.post("/movies/addToWatchList", async (req, res) => {
+    //   const userData = req.body;
+    //   if (userData.email) {
+    //     const query = { email: userData.email };
+    //     const queryData = await userWatchList.find(query).toArray();
+    //     if (userData.email === queryData[0].email) {
+    //       queryData[0].watchList.push(userData.id);
+    //     }
+    //     res.send(queryData);
+    //   } else {
+    //     const result = await userWatchList.insertOne(userData);
+    //     res.send(result);
+    //   }
+    // });
+
+    app.post("/movies/addToWatchList", async (req, res) => {
+      try {
+        const { email, id } = req.body;
+
+        if (!email || !id) {
+          return res
+            .status(400)
+            .send({ message: "Missing email or movie ID." });
+        }
+
+        const existingUser = await userWatchList.findOne({ email });
+
+        if (existingUser) {
+          // Check if movie already exists in the user's watchlist
+          if (existingUser.watchList?.includes(id)) {
+            return res.status(200).send({ message: "Already in watchlist." });
+          }
+
+          // Add movie to watchlist
+          const updateResult = await userWatchList.updateOne(
+            { email },
+            { $push: { watchList: id } }
+          );
+
+          return res.status(200).send({
+            message: "Movie added to watchlist.",
+            result: updateResult,
+          });
+        } else {
+          // Create a new document for this user
+          const newUserData = {
+            email,
+            watchList: [id],
+          };
+          const insertResult = await userWatchList.insertOne(newUserData);
+          return res.status(201).send({
+            message: "User created and movie added to watchlist.",
+            result: insertResult,
+          });
+        }
+      } catch (error) {
+        console.error("Error adding to watchlist:", error);
+        res.status(500).send({ message: "Server error", error });
+      }
+    });
+    // app.get("/watchlist", async (req, res) => {
+    //   const result = await movieCollection.find().toArray();
+    //   res.send(result);
+    // });
+
+    app.get("/watchlist", async (req, res) => {
+      const email = req.query.email;
+      console.log("Watchlist query for email:", email);
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      try {
+        const userData = await userWatchList.findOne({ email });
+
+        if (!userData) {
+          return res.status(200).json({ watchList: [] });
+        }
+
+        // Just return the watchlist (as strings)
+        const watchList = (userData.watchList || []).map((id) => String(id));
+        res.status(200).json({ watchList });
+      } catch (err) {
+        console.error("Error fetching watchlist:", err);
+        res.status(500).json({ message: "Server error fetching watchlist" });
+      }
+    });
+
+    app.post("/movies/removeFromWatchList", async (req, res) => {
+      try {
+        const { email, id } = req.body;
+        if (!email || !id)
+          return res.status(400).send({ message: "Missing email or movie ID" });
+
+        const result = await userWatchList.updateOne(
+          { email },
+          { $pull: { watchList: id } }
+        );
+
+        if (result.modifiedCount > 0) {
+          res.status(200).send({ message: "Removed from watchlist" });
+        } else {
+          res.status(404).send({ message: "Movie not found in watchlist" });
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Server error" });
       }
     });
 
