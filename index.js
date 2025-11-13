@@ -61,13 +61,35 @@ async function run() {
       const result = await movieCollection.find().toArray();
       res.send(result);
     });
+    // app.get("/top-rated", async (req, res) => {
+    //   try {
+    //     const topMovies = await movieCollection
+    //       .find({}, { projection: { _id: 0 } })
+    //       .sort({ rating: -1 })
+    //       .limit(5)
+    //       .toArray();
+    //     res.send(topMovies);
+    //   } catch (error) {
+    //     console.error("Error fetching top-rated movies:", error);
+    //     res.status(500).send({ message: "Failed to fetch top-rated movies" });
+    //   }
+    // });
     app.get("/top-rated", async (req, res) => {
       try {
+        // Get min and max ratings from query params (default 0–10)
+        const minRating = parseFloat(req.query.min) || 0;
+        const maxRating = parseFloat(req.query.max) || 10;
+
+        // Find movies within the rating range
         const topMovies = await movieCollection
-          .find({}, { projection: { _id: 0 } })
-          .sort({ rating: -1 })
+          .find(
+            { rating: { $gte: minRating, $lte: maxRating } },
+            { projection: { _id: 0 } }
+          )
+          .sort({ rating: -1 }) // Sort descending by rating
           .limit(5)
           .toArray();
+
         res.send(topMovies);
       } catch (error) {
         console.error("Error fetching top-rated movies:", error);
@@ -173,22 +195,6 @@ async function run() {
         res.status(500).json({ message: "Error updating movie" });
       }
     });
-
-    //add watch list
-    // app.post("/movies/addToWatchList", async (req, res) => {
-    //   const userData = req.body;
-    //   if (userData.email) {
-    //     const query = { email: userData.email };
-    //     const queryData = await userWatchList.find(query).toArray();
-    //     if (userData.email === queryData[0].email) {
-    //       queryData[0].watchList.push(userData.id);
-    //     }
-    //     res.send(queryData);
-    //   } else {
-    //     const result = await userWatchList.insertOne(userData);
-    //     res.send(result);
-    //   }
-    // });
 
     app.post("/movies/addToWatchList", async (req, res) => {
       try {
